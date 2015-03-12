@@ -32,6 +32,7 @@ else:
 
 
 class Jasper(object):
+    local = args.local
     def __init__(self):
         self._logger = logging.getLogger(__name__)
 
@@ -85,7 +86,8 @@ class Jasper(object):
             stt_engine_slug = 'sphinx'
             logger.warning("stt_engine not specified in profile, defaulting " +
                            "to '%s'", stt_engine_slug)
-        stt_engine_class = stt.get_engine_by_slug(stt_engine_slug)
+        if not self.local:
+            stt_engine_class = stt.get_engine_by_slug(stt_engine_slug)
 
         try:
             tts_engine_slug = self.config['tts_engine']
@@ -93,12 +95,17 @@ class Jasper(object):
             tts_engine_slug = tts.get_default_engine_slug()
             logger.warning("tts_engine not specified in profile, defaulting " +
                            "to '%s'", tts_engine_slug)
-        tts_engine_class = tts.get_engine_by_slug(tts_engine_slug)
+        if not args.local:
+            tts_engine_class = tts.get_engine_by_slug(tts_engine_slug)
+
 
         # Initialize Mic
-        self.mic = Mic(tts_engine_class.get_instance(),
+        if not self.local:
+            self.mic = Mic(tts_engine_class.get_instance(),
                        stt_engine_class.get_passive_instance(),
                        stt_engine_class.get_active_instance())
+        else:
+            self.mic = Mic("", "", "")
 
     def run(self):
         if 'first_name' in self.config:

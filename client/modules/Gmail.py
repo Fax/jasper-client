@@ -58,6 +58,9 @@ def fetchUnreadEmails(profile, since=None, markRead=False, limit=None):
         Returns:
         A list of unread email objects.
     """
+    #first of all CHECK if we have the password :|
+    if 'gmail_address' not in profile or 'gmail_password' not in profile:
+        return ""
     conn = imaplib.IMAP4_SSL('imap.gmail.com')
     conn.debug = 0
     conn.login(profile['gmail_address'], profile['gmail_password'])

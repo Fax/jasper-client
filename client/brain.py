@@ -63,6 +63,19 @@ class Brain(object):
 
         Arguments:
         text -- user input, typically speech, to be parsed by a module
+
+        Is Valid function in every module gets called
+        this function should return a value to see the affinity between the text and the module.
+        Then the control should be passed to the most relevant module.
+
+        11/03/2015
+        fax says:
+        I am against this practice. The control should not be delegated to another module but
+        an async request to the module should be sent to let him work on the request.
+        A new context could be opened in the main module and a list of keyword could be imported in the new
+        context.
+        Then the module acquires more weight when called if the request contains keywords added to the context.
+        And if the context of the new request is not different from the one relevant to the module.
         """
         for module in self.modules:
             for text in texts:
