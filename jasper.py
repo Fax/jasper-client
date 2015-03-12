@@ -98,7 +98,6 @@ class Jasper(object):
         if not args.local:
             tts_engine_class = tts.get_engine_by_slug(tts_engine_slug)
 
-
         # Initialize Mic
         if not self.local:
             self.mic = Mic(tts_engine_class.get_instance(),
