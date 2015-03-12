@@ -1,6 +1,16 @@
 jasper-client
 =============
 
+My jasperClient
+===============
+
+The Client itself is just a cool python app.
+I am thinking about using it for different purposes.
+
+Yay!
+
+Fax
+
 [![Build Status](https://travis-ci.org/jasperproject/jasper-client.svg?branch=master)](https://travis-ci.org/jasperproject/jasper-client) [![Coverage Status](https://img.shields.io/coveralls/jasperproject/jasper-client.svg)](https://coveralls.io/r/jasperproject/jasper-client)
 
 Client code for the Jasper voice computing platform. Jasper is an open source platform for developing always-on, voice-controlled applications.
