@@ -32,6 +32,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         This is the server itself
         It handles messages from clients
 
+        Feature ready
+
     """
 
     def handle(self):
