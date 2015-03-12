@@ -37,27 +37,19 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     """
 
     def handle(self):
-        data = self.request.recv(1024)
-        cur_thread = threading.current_thread()
-        response = "{}: {}".format(cur_thread.name, data)
-        self.request.sendall(response)
+        while True:
+            data = self.request.recv(1024)
+            if data == 0:
+                break
+            print "something incoming"
+            print data
+            cur_thread = threading.current_thread()
+            response = "{}: {}".format(cur_thread.name, data)
+            self.request.send(response)
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
-
-
-
-def client(ip, port, message):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((ip, port))
-    try:
-        sock.sendall(message)
-
-        response = sock.recv(1024)
-        print "Received: {}".format(response)
-    finally:
-        sock.close()
 
 
 class BrainSocketServer():
@@ -84,9 +76,7 @@ class BrainSocketServer():
 #Testing the client and the server instance
 if __name__ == "__main__":
     bs = BrainSocketServer()
-    client(bs.ip, bs.port, "lol" )
-    client(bs.ip, bs.port, "lol3234")
-    client(bs.ip, bs.port, "lolzzzzz")
-    client(bs.ip, bs.port, "exit")
+    while True:
+        pass
     bs.turnoff()
 

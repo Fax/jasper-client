@@ -47,3 +47,39 @@ class Conversation(object):
                 self.brain.query(input)
             else:
                 self.mic.say("Pardon?")
+
+
+    def handleConnection(self, sock):
+        self._logger.info("Starting to handle conversation with keyword '%s'.",
+                          self.persona)
+        while True:
+            # Print notifications until empty
+            notifications = self.notifier.getAllNotifications()
+            for notif in notifications:
+                self._logger.info("Received notification: '%s'", str(notif))
+
+            self._logger.debug("Started listening for keyword '%s'",
+                               self.persona)
+            threshold, transcribed = self.mic.passiveListen(self.persona)
+            self._logger.debug("Stopped listening for keyword '%s'",
+                               self.persona)
+
+            if not transcribed or not threshold:
+                self._logger.info("Nothing has been said or transcribed.")
+                continue
+            self._logger.info("Keyword '%s' has been said!", self.persona)
+
+            self._logger.debug("Started to listen actively with threshold: %r",
+                               threshold)
+            input = self.mic.activeListenToAllOptions(threshold)
+            self._logger.debug("Stopped to listen actively with threshold: %r",
+                               threshold)
+
+            if input:
+                sock.send(input[0])
+                print input[0]
+                response = sock.recv(1024)
+                print response
+                self.mic.say(response)
+            else:
+                self.mic.say("Pardon?")

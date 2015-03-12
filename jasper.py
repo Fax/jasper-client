@@ -6,6 +6,10 @@ import sys
 import shutil
 import logging
 
+import socket
+import threading
+import SocketServer
+
 import yaml
 import argparse
 
@@ -23,12 +27,114 @@ parser.add_argument('--no-network-check', action='store_true',
 parser.add_argument('--diagnose', action='store_true',
                     help='Run diagnose and exit')
 parser.add_argument('--debug', action='store_true', help='Show debug messages')
+
+parser.add_argument('-s','--server', help='Connect to a server host')
+parser.add_argument('-p','--port', help='Port override. Default 2220')
+
 args = parser.parse_args()
 
 if args.local:
     from client.local_mic import Mic
 else:
     from client.mic import Mic
+
+
+class JasperClient(object):
+    local = args.local
+    def __init__(self,ip,port):
+        self._logger = logging.getLogger(__name__)
+        self.ip = ip
+        self.port = port
+        self.pathcheck()
+        self.sock = ''
+
+
+    def pathcheck(self):
+        # Create config dir if it does not exist yet
+        if not os.path.exists(jasperpath.CONFIG_PATH):
+            try:
+                os.makedirs(jasperpath.CONFIG_PATH)
+            except OSError:
+                self._logger.error("Could not create config dir: '%s'",
+                                   jasperpath.CONFIG_PATH, exc_info=True)
+                raise
+        # Check if config dir is writable
+        if not os.access(jasperpath.CONFIG_PATH, os.W_OK):
+            self._logger.critical("Config dir %s is not writable. Jasper " +
+                                  "won't work correctly.",
+                                  jasperpath.CONFIG_PATH)
+
+        # FIXME: For backwards compatibility, move old config file to newly
+        #        created config dir
+        old_configfile = os.path.join(jasperpath.LIB_PATH, 'profile.yml')
+        new_configfile = jasperpath.config('profile.yml')
+        if os.path.exists(old_configfile):
+            if os.path.exists(new_configfile):
+                self._logger.warning("Deprecated profile file found: '%s'. " +
+                                     "Please remove it.", old_configfile)
+            else:
+                self._logger.warning("Deprecated profile file found: '%s'. " +
+                                     "Trying to copy it to new location '%s'.",
+                                     old_configfile, new_configfile)
+                try:
+                    shutil.copy2(old_configfile, new_configfile)
+                except shutil.Error:
+                    self._logger.error("Unable to copy config file. " +
+                                       "Please copy it manually.",
+                                       exc_info=True)
+                    raise
+
+        # Read config
+        self._logger.debug("Trying to read config file: '%s'", new_configfile)
+        try:
+            with open(new_configfile, "r") as f:
+                self.config = yaml.safe_load(f)
+        except OSError:
+            self._logger.error("Can't open config file: '%s'", new_configfile)
+            raise
+
+        try:
+            stt_engine_slug = self.config['stt_engine']
+        except KeyError:
+            stt_engine_slug = 'sphinx'
+            logger.warning("stt_engine not specified in profile, defaulting " +
+                           "to '%s'", stt_engine_slug)
+        if not self.local:
+            stt_engine_class = stt.get_engine_by_slug(stt_engine_slug)
+
+        try:
+            tts_engine_slug = self.config['tts_engine']
+        except KeyError:
+            tts_engine_slug = tts.get_default_engine_slug()
+            logger.warning("tts_engine not specified in profile, defaulting " +
+                           "to '%s'", tts_engine_slug)
+        if not args.local:
+            tts_engine_class = tts.get_engine_by_slug(tts_engine_slug)
+
+        # Initialize Mic
+        if not self.local:
+            self.mic = Mic(tts_engine_class.get_instance(),
+                       stt_engine_class.get_passive_instance(),
+                       stt_engine_class.get_active_instance())
+        else:
+            self.mic = Mic("", "", "")
+
+    def connection(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((self.ip, self.port))
+        message = "connection from client"
+        print message
+        self.sock.sendall(message)
+        response = self.sock.recv(1024)
+        print "k"
+        print response
+        print "Received: {}".format(response)
+
+
+    def run(self):
+        self.connection()
+        conversation = Conversation("JASPER", self.mic, self.config)
+        conversation.handleConnection(self.sock)
 
 
 class Jasper(object):
@@ -138,9 +244,13 @@ if __name__ == "__main__":
     if args.diagnose:
         failed_checks = diagnose.run()
         sys.exit(0 if not failed_checks else 1)
-
+    print ""
+    print args
     try:
-        app = Jasper()
+        if args.server:
+            app = JasperClient(args.server,args.port if args.port else 2220)
+        else:
+            app = Jasper()
     except Exception:
         logger.error("Error occured!", exc_info=True)
         sys.exit(1)
